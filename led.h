@@ -1,7 +1,7 @@
 /*
  * led.h
  * Created: 19.10.2017
- * Author : Kamil Bielowka
+ * Author : KB1992PL
  *
  * Functions to control PWM and programming mode
  */ 
