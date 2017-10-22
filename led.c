@@ -1,7 +1,7 @@
 /*
  * led.c
  * Created: 19.10.2017
- * Author : Kamil Bielowka
+ * Author : KB1992PL
  */ 
 
 #include <avr/interrupt.h>
