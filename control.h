@@ -2,7 +2,7 @@
  * control.h
  *
  * Created: 19.10.2017 17:15:48
- *  Author: Kamil Bielowka
+ *  Author: KB1992PL
  *
  * Function which gets ir data and runs other functions to control programming mode, PWM, etc.
  */ 
