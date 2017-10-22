@@ -3,7 +3,7 @@
  * Project: 8-channel LED driver
  * Created: 2016-10-25
  * Update : 2017-10-19 - code reorganization
- * Author : Kamil Bielowka
+ * Author : KB1992PL
  * For proper working Atmega needs to be set at 8MHz clock
  
  */ 
