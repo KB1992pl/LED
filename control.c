@@ -2,7 +2,7 @@
  * control.c
  *
  * Created: 19.10.2017 17:15:34
- *  Author: Kamil Bielowka
+ *  Author: KB1992PL
  */ 
 
 #include "led.h"
