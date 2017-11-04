@@ -23,20 +23,66 @@ volatile uint8_t transmission=0;	//In this remote there are 3 long signals befor
 volatile uint8_t ir_data=0;
 volatile uint8_t last_command;
 volatile uint8_t counter;		//counts received bits
-volatile uint8_t out_cycle[8];	// 0,1,2 - r,g,b; 3 - cold light; 4,5,6,7 - other, outputs for another lights
+volatile uint8_t out_cycle[CHANNELS_ENABLED];	// 0,1,2 - r,g,b; 3 - cold light; 4,5,6,7 - other, outputs for another lights
 volatile uint8_t status=0x01;	//bit 0 - diodes output enable, bit 1 - programming mode enable 
 
-
+void intproc();
+void tim(); /*** PWM function ***/
 
 int main(void)
 {
 	init();
     while (1) 
     {
-		sleep_mode();
+		if((TIFR&(1<<TOV0))) tim();
     }
 }
 
+
+
+	void tim(){
+	TIFR|=(1<<TOV0);
+	tclock++;
+	TCNT0 = TIMER0_REGISTER; //counts in 0.1ms
+	if (tclock>=MAX_CYCLE)
+	{
+		tclock=0;
+		timeout--;
+	}
+	if (timeout==0)
+	{
+		counter=0;
+		ir_data=0;
+		transmission=0;
+	}
+	
+	if ((status&0x01)==1)		//if led enable
+	{
+		for (int8_t i=0; i<CHANNELS_ENABLED; i++)			//PWM driver - controls LED intensity
+		{
+			if (out_cycle[i]>tclock) CONTROL|=(1<<i);
+			else CONTROL&=~(1<<i);
+		}
+	}
+	else						// if led disable
+	{
+		PORTD=0x00;
+		status=0;
+		CONTROL=0x00;
+	}
+	if ((status&0x02)==0x02)	//programming mode enable
+	{
+		PORTD=(1<<DIODE_PROG);
+	}
+	else
+	{
+		PORTD&=~(1<<DIODE_PROG);
+	}
+	
+	if ((GIFR&(1<<INTF0))) intproc();
+		
+	
+}
 
 
 /************************************************************************/
@@ -44,7 +90,9 @@ int main(void)
 /*	"0" or "1"															*/
 /************************************************************************/
 
-SIGNAL(INT0_vect){
+void intproc()
+{
+	GIFR|=(1<<INTF0);
 	static uint8_t ir_clock;
 	if(counter<8+OFFSET)
 	{
@@ -83,47 +131,5 @@ SIGNAL(INT0_vect){
 		ir_clock = tclock;
 		if (counter==8+OFFSET) control(&ir_data, &last_command, out_cycle, &status, &timeout);
 	}
-}
-
-
-
-SIGNAL(TIMER0_OVF_vect){
-	tclock++;
-	TCNT0 = TIMER0_REGISTER; //counts in 0.1ms
-	if (tclock>=MAX_CYCLE)
-	{
-		tclock=0;
-		timeout--;
-	}
-	if (timeout==0)
-	{
-		counter=0;
-		ir_data=0;
-		transmission=0;
-	}
-	
-	if ((status&0x01)==1)		//if led enable
-	{
-		for (int8_t i=0; i<CHANNELS_ENABLED; i++)			//PWM driver - controls LED intensity
-		{
-			if (out_cycle[i]>tclock) CONTROL|=(1<<i);
-			else CONTROL&=~(1<<i);
-		}
-	}
-	else						// if led disable
-	{
-		PORTD=0x00;
-		status=0;
-		CONTROL=0x00;
-	}
-	if ((status&0x02)==0x02)	//programming mode enable
-	{
-		PORTD=(1<<DIODE_PROG);
-	}
-	else
-	{
-		PORTD&=~(1<<DIODE_PROG);
-	}
-	
 	
 }

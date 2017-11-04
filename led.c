@@ -32,11 +32,8 @@ void init(void)
 	#if (TIMER0_DIVIDER ==64)
 	TCCR0=0x03;	
 	#endif
-
 	PORTD|=(1<<DIODE_ON);
-	
-	
-	sei();
+
 }
 
 
