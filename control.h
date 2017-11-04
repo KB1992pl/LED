@@ -12,9 +12,7 @@
 
 #include "led.h"
 
-#define OFFSET 4		//count of ignored data bits - the same for all commands
-#define MAX_TIMEOUT 5	//MAX_TIMEOUT * 5ms
-#define MAX_CYCLE 150	// max_cycle *0,1ms = timer period
+
 /*** decoded data frames from remote control (using logic analyzer) ***/
 #define RED		 0b10101010
 #define GREEN	 0b01101010
@@ -40,18 +38,11 @@
 #define PROG_8	 0b11100000
 #define PROG_9	 0b00010000
 #define PROG_0	 0b10010000
+#define TIMER_BUTTON 0b11101100
+#define PG_PLUS		0b00111010
+#define PG_MINUS	0b11011010
 /***/
-#define CONTROL PORTB //selection of the control port of the diodes
-#define DIODE_RED	 0
-#define DIODE_GREEN	 1
-#define DIODE_BLUE	 2
-#define DIODE_YELLOW 3
-#define DIODE_A 4
-#define DIODE_B 5
-#define DIODE_C 6
-#define DIODE_X 7
-#define DIODE_ON 0		//PORTD
-#define DIODE_PROG 1	//PORTD
+
 
 
 

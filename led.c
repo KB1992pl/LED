@@ -7,6 +7,7 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/eeprom.h>
+#include "user_def.h"
 #include "led.h"
 #include "control.h"
 
@@ -22,16 +23,29 @@ void init(void)
 	MCUCR|=(1<<ISC01);	//falling egde interrupt
 	GICR|=(1<<INT0);	//interrupt "INT0" enable
 	TIMSK|=(1<<TOIE0);	//timer overflow interrupt enable
-	TCCR0=0x02;			//timer divider: FCPU/8
+	#if (TIMER0_DIVIDER ==1)
+	TCCR0=0x01;			
+	#endif
+	#if (TIMER0_DIVIDER ==8)
+	TCCR0=0x02;			
+	#endif
+	#if (TIMER0_DIVIDER ==64)
+	TCCR0=0x03;	
+	#endif
+
+	PORTD|=(1<<DIODE_ON);
+	
+	
 	sei();
 }
 
 
 void light_decrease(uint8_t change, volatile uint8_t last_command, volatile uint8_t *out_cycle)
 {
-	if (change==1)
+	
+	if (*(out_cycle+last_command)-change > 0) 
 	{
-		if (*(out_cycle+last_command) > 0) (*(out_cycle+last_command))--;
+		(*(out_cycle+last_command))-=change;
 	}
 	else
 	{
@@ -42,9 +56,10 @@ void light_decrease(uint8_t change, volatile uint8_t last_command, volatile uint
 
 void light_increase(uint8_t change,  volatile uint8_t last_command, volatile uint8_t *out_cycle)
 {
-	if (change==1)
+	
+	if (*(out_cycle+last_command)+change<=MAX_CYCLE)
 	{
-		if (*(out_cycle+last_command)<=MAX_CYCLE) (*(out_cycle+last_command))++;
+		(*(out_cycle+last_command))+=change;
 	}
 	else
 	{

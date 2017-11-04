@@ -10,7 +10,7 @@
 #define F_CPU 8000000L
 
 
-
+#include "user_def.h"
 #include "led.h"	
 #include "control.h"
 #include <avr/interrupt.h>
@@ -18,7 +18,6 @@
 #include <avr/sleep.h>
 
 volatile uint8_t tclock;		//clock signal related to timer
-volatile uint8_t ir_clock;
 volatile uint8_t timeout; 
 volatile uint8_t transmission=0;	//In this remote there are 3 long signals before data frame appears 
 volatile uint8_t ir_data=0;
@@ -46,38 +45,43 @@ int main(void)
 /************************************************************************/
 
 SIGNAL(INT0_vect){
-	if(counter<8+OFFSET){
-	uint8_t ir_pulse_lenght=0;	
-	timeout = MAX_TIMEOUT;	
-	
-	if(transmission>0){
-	if (ir_clock<tclock) ir_pulse_lenght = tclock-ir_clock;
-	else ir_pulse_lenght = (tclock+MAX_CYCLE)-ir_clock;		//difference in 0.1ms (pulse time = ir_pulse_length*0.1ms)
-	}
-	if (transmission>=3){			//after third long pulse start to receive data
-		if ((ir_pulse_lenght>7)&&(ir_pulse_lenght<13)) 				//received "0"
+	static uint8_t ir_clock;
+	if(counter<8+OFFSET)
+	{
+		uint8_t ir_pulse_lenght=0;
+		
+		timeout = MAX_TIMEOUT;
+		
+		if(transmission>0)
 		{
-			if (transmission>=3+OFFSET)
-			{
-				ir_data=ir_data*2; 
-			}
-			else ++transmission; 
+			if (ir_clock<tclock) ir_pulse_lenght = tclock-ir_clock;
+			else ir_pulse_lenght = (tclock+MAX_CYCLE)-ir_clock;		//difference in 0.1ms (pulse time = ir_pulse_length*0.1ms)
 		}
-		else if ((ir_pulse_lenght>16)&&(ir_pulse_lenght<24))		//received "1"
-		{
-			if (transmission>=3+OFFSET)
+		if (transmission>=3)
+		{			//after third long pulse start to receive data
+			if ((ir_pulse_lenght>PULSE_WIDTH_0_MIN)&&(ir_pulse_lenght<PULSE_WIDTH_0_MAX)) 				//received "0"
 			{
-				ir_data=(ir_data*2)+1;
+				if (transmission>=3+OFFSET)
+				{
+					ir_data=ir_data*2;
+				}
+				else ++transmission;
 			}
-			else ++transmission;
+			else if ((ir_pulse_lenght>PULSE_WIDTH_1_MIN)&&(ir_pulse_lenght<PULSE_WIDTH_1_MAX))		//received "1"
+			{
+				if (transmission>=3+OFFSET)
+				{
+					ir_data=(ir_data*2)+1;
+				}
+				else ++transmission;
+			}
+			++counter;
 		}
-		++counter;
-	}
-	else if((transmission ==2)&&(ir_pulse_lenght>42)&&(ir_pulse_lenght<58)) transmission=3;		//
-	else if((transmission ==1)&&(ir_pulse_lenght>80)&&(ir_pulse_lenght<100)) transmission=2;
-	else if(transmission==0) transmission=1;		//first falling edge appears
-	ir_clock = tclock;
-	if (counter==8+OFFSET) control(&ir_data, &last_command, out_cycle, &status, &timeout);
+		else if((transmission ==2)&&(ir_pulse_lenght>PULSE_TRANSMISSION_2_MIN)&&(ir_pulse_lenght<PULSE_TRANSMISSION_2_MAX)) transmission=3;		//
+		else if((transmission ==1)&&(ir_pulse_lenght>PULSE_TRANSMISSION_1_MIN)&&(ir_pulse_lenght<PULSE_TRANSMISSION_1_MAX)) transmission=2;
+		else if(transmission==0) transmission=1;		//first falling edge appears
+		ir_clock = tclock;
+		if (counter==8+OFFSET) control(&ir_data, &last_command, out_cycle, &status, &timeout);
 	}
 }
 
@@ -85,20 +89,22 @@ SIGNAL(INT0_vect){
 
 SIGNAL(TIMER0_OVF_vect){
 	tclock++;
-	TCNT0 = 156; //counts in 0.1ms
-	if (timeout==0) 
+	TCNT0 = TIMER0_REGISTER; //counts in 0.1ms
+	if (tclock>=MAX_CYCLE)
 	{
-		counter=0; 
-		ir_data=0; 
+		tclock=0;
+		timeout--;
+	}
+	if (timeout==0)
+	{
+		counter=0;
+		ir_data=0;
 		transmission=0;
 	}
-		
-	if ((tclock%50==0)&&(timeout>0)) --timeout;
 	
 	if ((status&0x01)==1)		//if led enable
 	{
-		PORTD|=(1<<DIODE_ON);
-		for (int8_t i=0; i<=7; i++)			//PWM driver - controls LED intensity 
+		for (int8_t i=0; i<CHANNELS_ENABLED; i++)			//PWM driver - controls LED intensity
 		{
 			if (out_cycle[i]>tclock) CONTROL|=(1<<i);
 			else CONTROL&=~(1<<i);
@@ -111,7 +117,7 @@ SIGNAL(TIMER0_OVF_vect){
 		CONTROL=0x00;
 	}
 	if ((status&0x02)==0x02)	//programming mode enable
-	 {
+	{
 		PORTD=(1<<DIODE_PROG);
 	}
 	else
@@ -119,5 +125,5 @@ SIGNAL(TIMER0_OVF_vect){
 		PORTD&=~(1<<DIODE_PROG);
 	}
 	
-	if (tclock>MAX_CYCLE) tclock=0;
+	
 }
